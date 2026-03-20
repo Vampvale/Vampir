@@ -1,0 +1,496 @@
+-- Vampv4le Delta Edition v5 (Tabbed GUI)
+local player = game.Players.LocalPlayer
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "Vampv4le"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
+
+-- Main Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 700, 0, 450)
+mainFrame.Position = UDim2.new(0.5, -350, 0.5, -225)
+mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+mainFrame.BorderColor3 = Color3.fromRGB(180, 0, 0)
+mainFrame.BorderSizePixel = 3
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+title.Text = "VAMPV4LE PREMIUM"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBlack
+title.TextScaled = true
+title.Parent = mainFrame
+
+local close = Instance.new("TextButton")
+close.Size = UDim2.new(0, 30, 0, 30)
+close.Position = UDim2.new(1, -40, 0, 5)
+close.BackgroundTransparency = 1
+close.Text = "X"
+close.TextColor3 = Color3.fromRGB(255, 255, 255)
+close.TextScaled = true
+close.Font = Enum.Font.GothamBold
+close.Parent = mainFrame
+close.MouseButton1Click:Connect(function() screenGui:Destroy() end)
+
+-- Tab Bar
+local tabBar = Instance.new("Frame")
+tabBar.Size = UDim2.new(1, -20, 0, 40)
+tabBar.Position = UDim2.new(0, 10, 0, 45)
+tabBar.BackgroundTransparency = 1
+tabBar.Parent = mainFrame
+
+local tabs = {
+    {name = "COMBAT", icon = "⚔️"},
+    {name = "MOVEMENT", icon = "👟"},
+    {name = "HITBOX", icon = "📦"},
+    {name = "VISUALS", icon = "👁️"}
+}
+
+local tabButtons = {}
+local activeTab = "COMBAT"
+
+local contentContainer = Instance.new("Frame")
+contentContainer.Size = UDim2.new(1, -20, 1, -100)
+contentContainer.Position = UDim2.new(0, 10, 0, 90)
+contentContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+contentContainer.BorderColor3 = Color3.fromRGB(180, 0, 0)
+contentContainer.BorderSizePixel = 2
+contentContainer.Parent = mainFrame
+
+local function createTabButton(name, icon, index)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 150, 0, 35)
+    btn.Position = UDim2.new(0, (index-1)*160, 0, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.Text = icon .. " " .. name
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextScaled = true
+    btn.BorderColor3 = Color3.fromRGB(180, 0, 0)
+    btn.BorderSizePixel = 1
+    btn.Parent = tabBar
+    
+    btn.MouseButton1Click:Connect(function()
+        for _, b in pairs(tabButtons) do
+            b.btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            b.btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        activeTab = name
+        updateContent()
+    end)
+    
+    table.insert(tabButtons, {btn = btn, name = name})
+end
+
+for i, tab in ipairs(tabs) do
+    createTabButton(tab.name, tab.icon, i)
+end
+if tabButtons[1] then
+    tabButtons[1].btn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+    tabButtons[1].btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+end
+
+-- Variabel fitur
+local features = {
+    killAura = false,
+    dmgMult = 5,
+    speedBoost = false,
+    speedValue = 70,
+    jumpBoost = false,
+    jumpPower = 75,
+    infJump = false,
+    hitboxEnabled = false,
+    hitboxScale = 2.5,
+    hitboxTransparent = false,
+    espOn = false,
+    wallhackOn = false
+}
+
+-- Fungsi UI
+local function createToggle(parent, name, yPos, getFunc, setFunc, btnWidth)
+    btnWidth = btnWidth or 45
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(1, -20, 0, 30)
+    bg.Position = UDim2.new(0, 10, 0, yPos)
+    bg.BackgroundTransparency = 1
+    bg.Parent = parent
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 200, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = 18
+    label.Parent = bg
+    
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, btnWidth, 0, 24)
+    btn.Position = UDim2.new(1, -btnWidth-10, 0.5, -12)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.BorderColor3 = Color3.fromRGB(180, 0, 0)
+    btn.Text = "OFF"
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 16
+    btn.Parent = bg
+    
+    btn.MouseButton1Click:Connect(function()
+        local newState = not getFunc()
+        setFunc(newState)
+        btn.Text = newState and "ON" or "OFF"
+        btn.BackgroundColor3 = newState and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(50, 50, 50)
+    end)
+end
+
+local function createSlider(parent, name, yPos, minVal, maxVal, defaultVal, getFunc, setFunc, valueSuffix, decimals)
+    decimals = decimals or 1
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(1, -20, 0, 50)
+    bg.Position = UDim2.new(0, 10, 0, yPos)
+    bg.BackgroundTransparency = 1
+    bg.Parent = parent
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 200, 0, 25)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = 18
+    label.Parent = bg
+    
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(0, 60, 0, 25)
+    valueLabel.Position = UDim2.new(1, -70, 0, 0)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = tostring(defaultVal) .. (valueSuffix or "")
+    valueLabel.TextColor3 = Color3.fromRGB(180, 0, 0)
+    valueLabel.Font = Enum.Font.SourceSansBold
+    valueLabel.TextSize = 18
+    valueLabel.Parent = bg
+    
+    local sliderBg = Instance.new("Frame")
+    sliderBg.Size = UDim2.new(1, -30, 0, 6)
+    sliderBg.Position = UDim2.new(0, 0, 0, 30)
+    sliderBg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    sliderBg.BorderSizePixel = 0
+    sliderBg.Parent = bg
+    
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
+    sliderFill.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Parent = sliderBg
+    
+    local sliderBtn = Instance.new("TextButton")
+    sliderBtn.Size = UDim2.new(0, 16, 0, 16)
+    sliderBtn.Position = UDim2.new((defaultVal - minVal) / (maxVal - minVal), -8, 0.5, -8)
+    sliderBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    sliderBtn.BorderSizePixel = 1
+    sliderBtn.BorderColor3 = Color3.fromRGB(180, 0, 0)
+    sliderBtn.Text = ""
+    sliderBtn.Parent = sliderBg
+    
+    local dragging = false
+    local mouse = player:GetMouse()
+    
+    sliderBtn.MouseButton1Down:Connect(function()
+        dragging = true
+    end)
+    
+    mouse.Move:Connect(function()
+        if dragging then
+            local pos = mouse.X - sliderBg.AbsolutePosition.X
+            local percent = math.clamp(pos / sliderBg.AbsoluteSize.X, 0, 1)
+            local value = minVal + (maxVal - minVal) * percent
+            local mult = 10^decimals
+            value = math.floor(value * mult + 0.5) / mult
+            sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+            sliderBtn.Position = UDim2.new(percent, -8, 0.5, -8)
+            valueLabel.Text = tostring(value) .. (valueSuffix or "")
+            setFunc(value)
+        end
+    end)
+    
+    mouse.Button1Up:Connect(function()
+        dragging = false
+    end)
+    
+    setFunc(defaultVal)
+end
+
+-- Update konten berdasarkan tab
+function updateContent()
+    for _, child in pairs(contentContainer:GetChildren()) do
+        child:Destroy()
+    end
+    
+    local yPos = 10
+    
+    if activeTab == "COMBAT" then
+        createToggle(contentContainer, "Kill Aura", yPos, 
+            function() return features.killAura end, 
+            function(v) features.killAura = v end)
+        yPos = yPos + 40
+        createSlider(contentContainer, "Damage Multiplier", yPos, 1, 50, features.dmgMult,
+            function() return features.dmgMult end,
+            function(v) features.dmgMult = v end, "x")
+        yPos = yPos + 60
+    elseif activeTab == "MOVEMENT" then
+        createToggle(contentContainer, "Speed Boost", yPos,
+            function() return features.speedBoost end,
+            function(v) features.speedBoost = v end)
+        yPos = yPos + 40
+        createSlider(contentContainer, "Walk Speed", yPos, 16, 250, features.speedValue,
+            function() return features.speedValue end,
+            function(v) features.speedValue = v end, "")
+        yPos = yPos + 60
+        createToggle(contentContainer, "Jump Boost", yPos,
+            function() return features.jumpBoost end,
+            function(v) features.jumpBoost = v end)
+        yPos = yPos + 40
+        createSlider(contentContainer, "Jump Power", yPos, 50, 500, features.jumpPower,
+            function() return features.jumpPower end,
+            function(v) features.jumpPower = v end, "")
+        yPos = yPos + 60
+        createToggle(contentContainer, "Infinite Jump", yPos,
+            function() return features.infJump end,
+            function(v) features.infJump = v end)
+        yPos = yPos + 40
+    elseif activeTab == "HITBOX" then
+        createToggle(contentContainer, "Big Hitbox (Musuh)", yPos,
+            function() return features.hitboxEnabled end,
+            function(v) features.hitboxEnabled = v end)
+        yPos = yPos + 40
+        createSlider(contentContainer, "Hitbox Scale", yPos, 1, 5, features.hitboxScale,
+            function() return features.hitboxScale end,
+            function(v) features.hitboxScale = v end, "x", 1)
+        yPos = yPos + 60
+        createToggle(contentContainer, "Transparent Hitbox", yPos,
+            function() return features.hitboxTransparent end,
+            function(v) features.hitboxTransparent = v end, 60)
+        yPos = yPos + 40
+    elseif activeTab == "VISUALS" then
+        createToggle(contentContainer, "ESP (Nama + Health)", yPos,
+            function() return features.espOn end,
+            function(v) features.espOn = v end)
+        yPos = yPos + 40
+        createToggle(contentContainer, "Wallhack (Tembus Dinding)", yPos,
+            function() return features.wallhackOn end,
+            function(v) features.wallhackOn = v end)
+        yPos = yPos + 40
+    end
+end
+
+updateContent()
+
+-- Loops fitur
+spawn(function()
+    while true do
+        wait(0.1)
+        if player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.WalkSpeed = features.speedBoost and features.speedValue or 16
+        end
+    end
+end)
+
+spawn(function()
+    while true do
+        wait(0.1)
+        if player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.JumpPower = features.jumpBoost and features.jumpPower or 50
+        end
+    end
+end)
+
+local userInput = game:GetService("UserInputService")
+local jumpConnection
+function enableInfJump(enable)
+    if jumpConnection then
+        jumpConnection:Disconnect()
+        jumpConnection = nil
+    end
+    if enable then
+        jumpConnection = userInput.JumpRequest:Connect(function()
+            if player.Character and player.Character:FindFirstChild("Humanoid") then
+                player.Character.Humanoid:ChangeState("Jumping")
+            end
+        end)
+    end
+end
+spawn(function()
+    while true do
+        wait(0.3)
+        enableInfJump(features.infJump)
+    end
+end)
+
+spawn(function()
+    while true do
+        wait(0.3)
+        if features.killAura and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local root = player.Character.HumanoidRootPart
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p ~= player and p.Character and p.Character:FindFirstChild("Humanoid") then
+                    local otherRoot = p.Character:FindFirstChild("HumanoidRootPart")
+                    if otherRoot and (root.Position - otherRoot.Position).magnitude < 20 then
+                        p.Character.Humanoid.Health = p.Character.Humanoid.Health - (12 * features.dmgMult)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+spawn(function()
+    while true do
+        wait(0.3)
+        if features.hitboxEnabled then
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p ~= player and p.Character then
+                    local scale = features.hitboxScale
+                    local parts = {
+                        p.Character:FindFirstChild("Head"),
+                        p.Character:FindFirstChild("Torso") or p.Character:FindFirstChild("UpperTorso"),
+                        p.Character:FindFirstChild("HumanoidRootPart"),
+                        p.Character:FindFirstChild("Left Arm") or p.Character:FindFirstChild("LeftHand"),
+                        p.Character:FindFirstChild("Right Arm") or p.Character:FindFirstChild("RightHand"),
+                        p.Character:FindFirstChild("Left Leg") or p.Character:FindFirstChild("LeftFoot"),
+                        p.Character:FindFirstChild("Right Leg") or p.Character:FindFirstChild("RightFoot")
+                    }
+                    for _, part in pairs(parts) do
+                        if part and part:IsA("BasePart") then
+                            if not part:GetAttribute("OriginalSize") then
+                                part:SetAttribute("OriginalSize", part.Size)
+                            end
+                            part.Size = part:GetAttribute("OriginalSize") * scale
+                            part.Transparency = features.hitboxTransparent and 0.7 or 0
+                        end
+                    end
+                end
+            end
+        else
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p ~= player and p.Character then
+                    local parts = {
+                        p.Character:FindFirstChild("Head"),
+                        p.Character:FindFirstChild("Torso") or p.Character:FindFirstChild("UpperTorso"),
+                        p.Character:FindFirstChild("HumanoidRootPart"),
+                        p.Character:FindFirstChild("Left Arm") or p.Character:FindFirstChild("LeftHand"),
+                        p.Character:FindFirstChild("Right Arm") or p.Character:FindFirstChild("RightHand"),
+                        p.Character:FindFirstChild("Left Leg") or p.Character:FindFirstChild("LeftFoot"),
+                        p.Character:FindFirstChild("Right Leg") or p.Character:FindFirstChild("RightFoot")
+                    }
+                    for _, part in pairs(parts) do
+                        if part and part:IsA("BasePart") and part:GetAttribute("OriginalSize") then
+                            part.Size = part:GetAttribute("OriginalSize")
+                            part.Transparency = 0
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+spawn(function()
+    while true do
+        wait(0.3)
+        if features.espOn then
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p ~= player and p.Character and p.Character:FindFirstChild("Head") then
+                    local head = p.Character.Head
+                    if not head:FindFirstChild("VampESP") then
+                        local esp = Instance.new("BillboardGui")
+                        esp.Name = "VampESP"
+                        esp.Size = UDim2.new(0, 100, 0, 25)
+                        esp.StudsOffset = Vector3.new(0, 3, 0)
+                        esp.AlwaysOnTop = true
+                        local text = Instance.new("TextLabel")
+                        text.Size = UDim2.new(1, 0, 1, 0)
+                        text.BackgroundTransparency = 1
+                        text.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        text.TextStrokeTransparency = 0
+                        text.Font = Enum.Font.GothamBold
+                        text.TextScaled = true
+                        text.Parent = esp
+                        esp.Parent = head
+                    end
+                    if head:FindFirstChild("VampESP") then
+                        local text = head.VampESP:FindFirstChildOfClass("TextLabel")
+                        if text and p.Character:FindFirstChild("Humanoid") then
+                            text.Text = p.Name .. " ❤️ " .. math.floor(p.Character.Humanoid.Health)
+                        end
+                    end
+                end
+            end
+        else
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("Head") then
+                    local head = p.Character.Head
+                    if head:FindFirstChild("VampESP") then
+                        head.VampESP:Destroy()
+                    end
+                end
+            end
+        end
+    end
+end)
+
+spawn(function()
+    while true do
+        wait(0.3)
+        if features.wallhackOn then
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p ~= player and p.Character then
+                    local parts = {
+                        p.Character:FindFirstChild("Head"),
+                        p.Character:FindFirstChild("Torso") or p.Character:FindFirstChild("UpperTorso"),
+                        p.Character:FindFirstChild("Left Arm") or p.Character:FindFirstChild("LeftHand"),
+                        p.Character:FindFirstChild("Right Arm") or p.Character:FindFirstChild("RightHand"),
+                        p.Character:FindFirstChild("Left Leg") or p.Character:FindFirstChild("LeftFoot"),
+                        p.Character:FindFirstChild("Right Leg") or p.Character:FindFirstChild("RightFoot")
+                    }
+                    for _, part in pairs(parts) do
+                        if part and part:IsA("BasePart") then
+                            if not part:FindFirstChild("WallhackHighlight") then
+                                local highlight = Instance.new("Highlight")
+                                highlight.Name = "WallhackHighlight"
+                                highlight.Adornee = part
+                                highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                                highlight.FillTransparency = 0.3
+                                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                highlight.Parent = part
+                            end
+                        end
+                    end
+                end
+            end
+        else
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p.Character then
+                    local parts = {
+                        p.Character:FindFirstChild("Head"),
+                        p.Character:FindFirstChild("Torso") or p.Character:FindFirstChild("UpperTorso"),
+                        p.Character:FindFirstChild("Left Arm") or p.Character:FindFirstChild("LeftHand"),
+                        p.Character:FindFirstChild("Right Arm") or p.Character:FindFirstChild("RightHand"),
+                        p.Character:FindFirstChild("Left Leg") or p.Character:FindFirstChild("LeftFoot"),
+                        p.Character:FindFirstChild("Right Leg") or p.Character:FindFirstChild("RightFoot")
+                    }
+                    for _, part in pairs(parts) do
+                        if part and part:IsA("BasePart") then
+                            local highlight = part:FindFirstChild("WallhackHighlight")
+                            if highlight then
+                                highlight:Destroy()
+                            end
+                        end
